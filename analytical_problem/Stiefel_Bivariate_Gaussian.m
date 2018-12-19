@@ -20,8 +20,11 @@ test = test_train(N + 1:N + N_test);
 X = randn(H, d);
 X_train = X(train, :);
 X_test = X(test, :);
-Ureal = rand(d, m);
-[Q,~] = qr(Ureal); Ureal = Q(:,1:2);
+Ureal = [-0.5425 0.0654;
+        -0.6784 -0.4931
+        -0.2381 -0.2367
+        -0.1655 0.4643
+        -0.4017 0.6935];
 U_train = X_train * Ureal;
 U_test = X_test * Ureal;
 f_train = zeros(N, 1) ; %+ 0.001 * randn(N, 1);
@@ -37,7 +40,7 @@ for i = 1 : N_test
 end
 
 %% Optimization test!
-repeats = 1;
+repeats = 20;
 for i = 1 : repeats
     Uo = randn(d,d); [Q, ~] = qr(Uo); Uo = Q(:,1:2);
     [N, d] = size(X_train);
@@ -55,10 +58,12 @@ for i = 1 : repeats
     iters_store{i} = [info.iter];
     cost_store{i} = [info.cost];
     grad_store{i} = [info.gradnorm];
+    uopt_store{i} = Uopt;
 end
 %% Plotting the optimized solution! Woot!
 close all;
-
+[~, cycles] = min(xcost_store);
+Uopt = uopt_store{cycles}
 vopt_test = X_test * Uopt;
 vopt_train = X_train * Uopt;
 
@@ -113,8 +118,6 @@ figure2 = figure;
 axes2 = axes('Parent',figure2);
 set(axes2, 'FontSize', 18, 'LineWidth', 2); hold on; box on; grid on;
 surf(meshX,meshY,ymu_real', 'DisplayName', 'Function') ; shading interp;
-plot3(vtrain(:,1), vtrain(:,2), f_train, 'x', 'DisplayName', 'Training', 'MarkerSize', 8, 'LineWidth', 2);
-plot3(vreal(:,1), vreal(:,2), f_test, 's', 'DisplayName', 'Testing', 'MarkerSize', 8, 'LineWidth', 2);
 xlim([-3 3]); ylim([-3 3]);zlim([-0.1 0.4]);
 legend2 = legend(axes2,'show');
 set(legend2,'EdgeColor',[1 1 1], 'Interpreter', 'Latex', ...
@@ -123,6 +126,17 @@ view([-22 10]);
 caxis([0 0.4]);
 colorbar('peer',axes2);
 print('D2.png', '-dpng', '-r400');
+
+figure4 = figure;
+set(gca, 'FontSize', 18, 'LineWidth', 2, 'YScale','log'); hold on; box on; grid on;
+for i = 1 : repeats
+    semilogy(iters_store{i}, cost_store{i} , '.-', 'LineWidth', 3); 
+end
+xlabel('Iteration number', 'Interpreter', 'Latex'); ylabel('Objective function', 'Interpreter', 'Latex');
+print('D4.png', '-dpng', '-r400');
+hold off;
+
+
 %% Cost function and its gradient!
 function [r, dr] = cost(A, X_train, X_test, f_train, f_test)
 [N, d] = size(X_train);
